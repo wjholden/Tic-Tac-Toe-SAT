@@ -23,6 +23,7 @@
 \section{Introduction}
 
 In this exercise we will construct a series of boolean satisfiability clauses to find a winning move for the game Tic-Tac-Toe.
+Throughout this exercise, assume that we are playing as $x$ and that it is our turn to play for any game shown.
 We treat the SAT solver as a ``black box'' and will not worry about how it works.
 A SAT solver accepts a \textit{formula} of \textit{clauses} containing boolean \textit{variables} in \textit{conjunctive normal form} (CNF).
 An example of a formula in CNF is
@@ -41,7 +42,7 @@ A less obvious example is
 
 In this case, the $(C)$ clause implies $C=T$, which means $B=T$, which then implies $A=T$, but now the final clause is $(F \vee F \vee F)$ which falsifies the formula.
 
-A computer program for finding a set of satisfying literals, or proving that no such assignment exists, is called a \textit{SAT solver}.
+A \textit{SAT solver} is a computer program for finding a set of satisfying literals or proving if no such satisfying assignment exists.
 Though the boolean satisfiability problem is NP-complete, state of the art SAT solvers are very efficient in practice.
 Martin Horenovsky has a very nice article at \url{https://codingnest.com/modern-sat-solvers-fast-neat-underused-part-1-of-n/} on this subject.
 I originally learned of the satisfiability problem and SAT solvers attending a course on NP-Complete Problems from Alexander Kulikov (\url{https://www.edx.org/course/np-complete-problems-uc-san-diegox-algs203x}).
@@ -86,6 +87,48 @@ can be won by setting $i=x$.  We can express the eight winning combinations as
 (a \wedge e \wedge i) \vee (c \wedge e \wedge g).\end{equation}
 
 This long formula is in \textit{disjunctive normal form} (DNF) and not the CNF we want.
+We could use rules of discrete mathematics, such as DeMorgan's Law and Distributivity, but in this paper on computational tools let us instead use \textit{Mathematica's} \texttt{BooleanConvert} function (\url{https://reference.wolfram.com/language/ref/BooleanConvert.html}).
+\texttt{BooleanConvert} accepts an expression and converts it to the desired form.
+(\textit{Mathematica} functionality is available at \url{https://www.wolframalpha.com}).
 
+\begin{lstlisting}
+In[1] := BooleanConvert[((a && b && c) || (d && e && f) || (g && h && i) || (a && d && g) || (b && e && h) || (c && f && i) || (a && e && i) || (c && e && f)),"CNF"]
+Out[1] := (a || b || c || d || g) && (a || b || f || g) && (a || b || f ||  i) && (a || c || d || h) && (a || c || e || h) && (a || e || f || g) && (a || e || i) && (a || f || h) && (b || c || d || i) && (b || d || e || f || h) && (b || d || e || i) && (b || d || f ||  i) && (b || e || f || g) && (b || e || g || i) && (b || f || g || i) && (c || d || e || h) && (c || d || e || i) && (c || d || h || i) && (c || e || g) && (c || f || g || h || i)
+\end{lstlisting}
+
+Now we have our first set of constraints that we can provide to a SAT solver.
+An assignment of literals to the variables $a$ through $i$ is a winning move if all three variables in any row, column, or diagonal are $x$.
+
+\subsection{Contraint 2: Board Configuration}
+
+The game will be shown with some configuration of $x$ and $o$ settings on the board.
+For each position with an $x$ we will create a clause of unit length where that variable must be true.
+All positions marked $o$ induce a clause where that variable must be false.
+For example, given the game
+
+\tictactoe{x}{o}{x}{o}{x}{o}{o}{}{}
+
+we will set $a=T$, $b=F$, $c=T$, $d=F$, $e=T$, $f=F$, $g=F$ with the clauses
+
+\begin{equation}(a)(\neg b)(c)(\neg d)(e)(\neg f)(\neg g).\end{equation}
+
+These clauses must be generated based on game state.
+
+\subsection{Constraint 3: One Move}
+
+We assume that it is our turn to play, and we only get to make one move.
+For this, we use the \textit{exclusive or} operation against all of the unset variables.
+In the game
+
+\tictactoe{x}{}{x}{}{o}{}{o}{}{o}
+
+we create constraint clauses to show $b \oplus d \oplus f \oplus h$.
+We can punch this into \textit{Mathematica} if we want to, but we will need to generalize nested $\oplus$ operations.
+
+Exclusive or is defined as either but not both of two propositions. Using DeMorgan's Law, $\neg (x \wedge y) = \neg x \vee \neg y$, we can easily convert this statement into CNF.
+
+\begin{equation}A \oplus B = (A \vee B) \wedge \neg (A \wedge B) = (A \vee B) \wedge (\neg A \vee \neg B).\end{equation}
+
+If $B = C \oplus D$ then $A \oplus B = A \oplus (C \oplus D) = A \oplus ((C \vee D) \wedge (\neg C \wedge \neg D))$. 
 
 \end{document}
